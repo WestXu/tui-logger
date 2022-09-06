@@ -393,18 +393,17 @@ impl TuiLogger {
                 tli.targets.set(&log_entry.target, default_level);
             }
             if let Some(ref mut file) = tli.dump {
-                if let Err(_e) = writeln!(
+                writeln!(
                     file,
                     "{}:{}:{}:{}:{}:{}",
-                    &log_entry.timestamp.format("[%Y:%m:%d %H:%M:%S]"),
+                    &log_entry.timestamp.format("[%Y-%m-%d %H:%M:%S%.6f]"),
                     log_entry.level,
                     log_entry.target,
                     &log_entry.file,
                     log_entry.line,
                     &log_entry.msg
-                ) {
-                    // TODO: What to do in case of write error ?
-                }
+                )
+                .unwrap()
             }
             tli.events.push(log_entry);
         }
