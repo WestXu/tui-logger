@@ -415,7 +415,7 @@ impl TuiLogger {
     }
 }
 lazy_static! {
-    static ref TUI_LOGGER: TuiLogger = {
+    pub static ref TUI_LOGGER: TuiLogger = {
         let hs = HotSelect {
             hashtable: HashMap::with_capacity(1000),
             default: LevelFilter::Info,
