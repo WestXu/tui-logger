@@ -349,7 +349,7 @@ struct TuiLoggerInner {
     default: LevelFilter,
     targets: LevelConfig,
 }
-struct TuiLogger {
+pub struct TuiLogger {
     hot_select: Mutex<HotSelect>,
     hot_log: Mutex<HotLog>,
     inner: Mutex<TuiLoggerInner>,
