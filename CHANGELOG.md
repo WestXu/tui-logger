@@ -1,3 +1,32 @@
+0.11.1:
+- one line error report for demo example, if feature flag crossterm or termion not given
+- use cargo readme and test in github build
+- Fix of issue #60: panic on too small widget size
+
+0.11.0:
+- BREAKING CHANGE: TuiWidgetEvent::transition() method now takes a TuiWidgetEvent by value instead of by reference.
+- update ratatui to 0.25
+
+0.10.1:
+- update ratatui to ^0.25.0
+
+0.10.0:
+- Remove support for tui legacy crate
+- Use `Cell::set_symbol()` as performance optimization from ratatui
+- Require chrono >= 0.4.20 for avoid security vulnerability (https://rustsec.org/advisories/RUSTSEC-2020-0159.html)
+
+0.9.6:
+- update ratatui to 0.23.0
+
+0.9.5:
+- rework examples/demo to not use termion
+
+0.9.4:
+- fix breaking change in 0.9.3 as reported by issue #43
+
+0.9.3:
+- update to ratatui 0.22 and fix clippy warnings
+
 0.9.2:
 - update to ratatui 0.21
 

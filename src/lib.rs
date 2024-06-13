@@ -1,8 +1,5 @@
-// Generate README by gawk 'substr($0,1,3) == "//!"{print(substr($0,4))}' src/lib.rs
-
 //! # Logger with smart widget for the `tui` and `ratatui` crate
 //!
-//! ![Build Status](https://travis-ci.org/gin66/tui-logger.svg?branch=master)
 //! [![dependency status](https://deps.rs/repo/github/gin66/tui-logger/status.svg?service=github&nocache=0_9_1)](https://deps.rs/repo/github/gin66/tui-logger)
 //! ![Build examples](https://github.com/gin66/tui-logger/workflows/Build%20examples/badge.svg?service=github)
 //!
@@ -14,6 +11,15 @@
 //! ## Documentation
 //!
 //! [Documentation](https://docs.rs/tui-logger/latest/tui_logger/)
+//!
+//! ## Important note for `tui`
+//!
+//! The `tui` crate has been archived and `ratatui` has taken over.
+//! In order to avoid supporting compatibility for an inactive crate,
+//! the v0.9.x releases are the last to support `tui`. In case future bug fixes
+//! are needed, the branch `tui_legacy` has been created to track changes to 0.9.x releases.
+//!
+//! Starting with v0.10 `tui-logger` is `ratatui` only.
 //!
 //! ## Features
 //!
@@ -106,25 +112,16 @@
 //!
 //! ## Demo
 //!
-//! The demo does not support another terminal backend besides termion.
-//! During build the termion feature of tui needs to be enabled
+//! Run demo using termion:
 //!
-//! Run demo with tui and termion:
-//!
-//! ```
-//! cargo run --example demo --no-default-features -F tui-rs,tui/termion
+//! ```ignore
+//! cargo run --example demo --features termion
 //! ```
 //!
-//! or simply:
+//! Run demo with crossterm:
 //!
-//! ```
-//! cargo run --example demo
-//! ```
-//!
-//! Run demo with ratatui and termion:
-//!
-//! ```
-//! cargo run --example demo --no-default-features -F ratatui-support,ratatui/termion
+//! ```ignore
+//! cargo run --example demo --features crossterm
 //! ```
 //!
 //! ## `slog` support
@@ -141,10 +138,6 @@
 //! it receives to the `tui-logger` widget
 //!
 //! Enabled by feature "tracing-support"
-//!
-//! ## `ratatui` support
-//!
-//! Enabled by feature "ratatui-support" + disable default-features of tui-logger
 //!
 //! ## Custom filtering
 //! ```rust
@@ -184,9 +177,19 @@
 //! * [Afonso Bordado](https://github.com/afonso360) for providing the patch to tui-rs v0.17
 //! * [Benjamin Kampmann](https://github.com/gnunicorn) for providing patch to tui-rs v0.18
 //! * [Paul Sanders](https://github.com/pms1969) for providing patch in [issue #30](https://github.com/gin66/tui-logger/issues/30)
-//! * [Ákos Hadnagy](https://github.com/ahadnagy) for providing patch in (https://github.com/gin66/tui-logger/issues/31) for tracing-subscriber support
-//! * [Orhun Parmaksız](https://github.com/orhun) for providing patches in [#33](https://github.com/gin66/tui-logger/issues/33), [#34](https://github.com/gin66/tui-logger/issues/34) and [#37](https://github.com/gin66/tui-logger/issues/37)
+//! * [Ákos Hadnagy](https://github.com/ahadnagy) for providing patch in [#31](https://github.com/gin66/tui-logger/issues/31) for tracing-subscriber support
+//! * [Orhun Parmaksız](https://github.com/orhun) for providing patches in [#33](https://github.com/gin66/tui-logger/issues/33), [#34](https://github.com/gin66/tui-logger/issues/34), [#37](https://github.com/gin66/tui-logger/issues/37) and [#46](https://github.com/gin66/tui-logger/issues/46)
+//! * [purephantom](https://github.com/purephantom) for providing patch in [#42](https://github.com/gin66/tui-logger/issues/42) for ratatui update
+//! * [Badr Bouslikhin](https://github.com/badrbouslikhin) for providing patch in [#47](https://github.com/gin66/tui-logger/issues/47) for ratatui update
+//! * [ganthern](https://github.com/ganthern) for providing patch in [#49](https://github.com/gin66/tui-logger/issues/49) for tui support removal
+//! * [Linda_pp](https://github.com/rhysd) for providing patch in [#51](https://github.com/gin66/tui-logger/issues/51) for Cell:set_symbol
+//! * [Josh McKinney](https://github.com/joshka) for providing patch in
+//! [#56](https://github.com/gin66/tui-logger/issues/56) for Copy on TuiWidgetEvent and
+//! TuiLoggerWidget
 //!
+//!## Star History
+//!
+//![![Star History Chart](https://api.star-history.com/svg?repos=gin66/tui-logger&type=Date)](https://star-history.com/#gin66/tui-logger&Date)
 #[macro_use]
 extern crate lazy_static;
 
@@ -200,20 +203,12 @@ use std::io::Write;
 use std::mem;
 use std::sync::Arc;
 
-#[cfg(feature = "ratatui-support")]
-use ratatui as tui;
+use ratatui::prelude::*;
+use ratatui::widgets::*;
 
 use chrono::{DateTime, Local};
 use log::{Level, LevelFilter, Log, Metadata, Record};
 use parking_lot::Mutex;
-use tui::buffer::Buffer;
-use tui::layout::{Constraint, Direction, Layout, Rect};
-use tui::style::{Modifier, Style};
-#[cfg(feature = "ratatui-support")]
-use tui::text::Line;
-#[cfg(not(feature = "ratatui-support"))]
-use tui::text::Spans as Line;
-use tui::widgets::{Block, BorderType, Borders, Widget};
 
 mod circular;
 #[cfg(feature = "slog-support")]
@@ -522,6 +517,7 @@ impl Log for TuiLogger {
 }
 
 /// A simple `Drain` to log any event directly.
+#[derive(Default)]
 pub struct Drain;
 
 impl Drain {
@@ -535,7 +531,7 @@ impl Drain {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub enum TuiWidgetEvent {
     SpaceKey,
     UpKey,
@@ -573,9 +569,9 @@ impl TuiWidgetInnerState {
     pub fn new() -> TuiWidgetInnerState {
         TuiWidgetInnerState::default()
     }
-    fn transition(&mut self, event: &TuiWidgetEvent) {
+    fn transition(&mut self, event: TuiWidgetEvent) {
         use TuiWidgetEvent::*;
-        match *event {
+        match event {
             SpaceKey => {
                 self.hide_off ^= true;
             }
@@ -652,7 +648,7 @@ impl TuiWidgetState {
         self.inner.lock().config.set(target, levelfilter);
         self
     }
-    pub fn transition(&mut self, event: &TuiWidgetEvent) {
+    pub fn transition(&mut self, event: TuiWidgetEvent) {
         self.inner.lock().transition(event);
     }
 }
@@ -838,7 +834,7 @@ impl<'b> Widget for TuiLoggerTargetWidget<'b> {
                     (3, "D", Level::Debug),
                     (4, "T", Level::Trace),
                 ] {
-                    let mut cell = buf.get_mut(la_left + j, la_top + i as u16);
+                    let cell = buf.get_mut(la_left + j, la_top + i as u16);
                     let cell_style = if *hot_level_filter >= *lev {
                         if *level_filter >= *lev {
                             if !focus_selected || i + offset == state.selected {
@@ -852,13 +848,13 @@ impl<'b> Widget for TuiLoggerTargetWidget<'b> {
                     } else if let Some(style_off) = self.style_off {
                         style_off
                     } else {
-                        cell.symbol = " ".to_string();
+                        cell.set_symbol(" ");
                         continue;
                     };
                     cell.set_style(cell_style);
-                    cell.symbol = sym.to_string();
+                    cell.set_symbol(sym);
                 }
-                buf.set_stringn(la_left + 5, la_top + i as u16, &":", la_width, self.style);
+                buf.set_stringn(la_left + 5, la_top + i as u16, ":", la_width, self.style);
                 buf.set_stringn(
                     la_left + 6,
                     la_top + i as u16,
@@ -877,7 +873,7 @@ impl<'b> Widget for TuiLoggerTargetWidget<'b> {
 
 /// The TuiLoggerWidget shows the logging messages in an endless scrolling view.
 /// It is controlled by a TuiWidgetState for selected events.
-#[derive(Debug, Clone, PartialEq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Hash)]
 pub enum TuiLoggerLevelOutput {
     Abbreviated,
     Long,
@@ -1131,14 +1127,14 @@ impl<'b> Widget for TuiLoggerWidget<'b> {
             }
             None => area,
         };
-        if list_area.width < 8 || list_area.height < 1 {
+        let indent = 9;
+        if list_area.width < indent + 4 || list_area.height < 1 {
             return;
         }
 
         let mut state = self.state.lock();
         let la_height = list_area.height as usize;
         let mut lines: Vec<(Option<Style>, u16, String)> = vec![];
-        let indent = 9;
         {
             state.opt_timestamp_next_page = None;
             let opt_timestamp_bottom = state.opt_timestamp_bottom;
@@ -1150,11 +1146,9 @@ impl<'b> Widget for TuiLoggerWidget<'b> {
                     if *level < evt.level {
                         continue;
                     }
-                } else {
-                    if let Some(level) = state.config.default_display_level {
-                        if level < evt.level {
-                            continue;
-                        }
+                } else if let Some(level) = state.config.default_display_level {
+                    if level < evt.level {
+                        continue;
                     }
                 }
                 if state.focus_selected {
@@ -1198,11 +1192,11 @@ impl<'b> Widget for TuiLoggerWidget<'b> {
         // lines is a vector with bottom line at index 0
         // wrapped_lines will be a vector with top line first
         let mut wrapped_lines = CircularBuffer::new(la_height);
+        let rem_width = la_width - indent as usize;
         while let Some((style, left, line)) = lines.pop() {
             if line.chars().count() > la_width {
                 wrapped_lines.push((style, left, line.chars().take(la_width).collect()));
                 let mut remain: String = line.chars().skip(la_width).collect();
-                let rem_width = la_width - indent as usize;
                 while remain.chars().count() > rem_width {
                     let remove: String = remain.chars().take(rem_width).collect();
                     wrapped_lines.push((style, indent, remove));
@@ -1436,13 +1430,8 @@ impl<'a> Widget for TuiLoggerSmartWidget<'a> {
         };
 
         let mut title_log = self.title_log.clone();
-        #[cfg(feature = "ratatui-support")]
         title_log
             .spans
-            .push(format!(" [log={:.1}/s]", entries_s).into());
-        #[cfg(not(feature = "ratatui-support"))]
-        title_log
-            .0
             .push(format!(" [log={:.1}/s]", entries_s).into());
 
         let hide_target = self.state.lock().hide_target;
